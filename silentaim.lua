@@ -1,9 +1,10 @@
 -- ==========================================
--- Universal Silent Aim V4 | Made By NullTalal
+-- Universal Silent Aim V1 | Made By NullTalal
 -- Mouse, Raycast & Hitbox Bypass
 -- ==========================================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local UIS = game:GetService("UserInputService")
@@ -21,7 +22,9 @@ local Target = nil
 local TargetPart = nil
 local oldIndex, oldNamecall
 
+-- ==========================================
 -- 1. رسم دائرة الـ FOV
+-- ==========================================
 local fovCircle = Drawing.new("Circle")
 fovCircle.Thickness = 1.5
 fovCircle.NumSides = 40
@@ -31,27 +34,58 @@ fovCircle.Color = Color3.fromRGB(0, 255, 204)
 fovCircle.Transparency = 1
 fovCircle.Visible = true
 
--- 2. الواجهة
+-- ==========================================
+-- 2. الواجهة (UI) مع الأنميشن
+-- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "UniversalSilentV4"
+ScreenGui.Name = "UniversalSilentV1"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = game.CoreGui
 
+-- زر فتح وقفل القائمة
+local ToggleOpenBtn = Instance.new("TextButton")
+ToggleOpenBtn.Size = UDim2.new(0, 100, 0, 35)
+ToggleOpenBtn.Position = UDim2.new(0, 20, 0, 20)
+ToggleOpenBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+ToggleOpenBtn.Text = "Open Menu"
+ToggleOpenBtn.TextColor3 = Color3.fromRGB(0, 255, 204)
+ToggleOpenBtn.Font = Enum.Font.GothamBold
+ToggleOpenBtn.TextSize = 13
+ToggleOpenBtn.Parent = ScreenGui
+Instance.new("UICorner", ToggleOpenBtn).CornerRadius = UDim.new(0, 6)
+local stroke1 = Instance.new("UIStroke", ToggleOpenBtn)
+stroke1.Color = Color3.fromRGB(0, 255, 204)
+stroke1.Thickness = 1
+
+-- القائمة الرئيسية
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 180, 0, 130)
-Main.Position = UDim2.new(0, 20, 0.5, -65)
+Main.Size = UDim2.new(0, 200, 0, 160)
+Main.Position = UDim2.new(0, 20, 0, 65)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 Main.BorderSizePixel = 0
 Main.Active = true
 Main.Draggable = true
+Main.ClipsDescendants = true
 Main.Parent = ScreenGui
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 8)
+local stroke2 = Instance.new("UIStroke", Main)
+stroke2.Color = Color3.fromRGB(0, 255, 204)
+stroke2.Thickness = 1
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+Title.Text = "NullTalal | Silent Aim"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 12
+Title.Parent = Main
 
 local Toggle = Instance.new("TextButton")
 Toggle.Size = UDim2.new(0.9, 0, 0, 30)
-Toggle.Position = UDim2.new(0.05, 0, 0, 10)
+Toggle.Position = UDim2.new(0.05, 0, 0, 40)
 Toggle.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-Toggle.Text = "Silent Aim V4 [ON]"
+Toggle.Text = "Silent Aim V1 [ON]"
 Toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
 Toggle.Font = Enum.Font.GothamBold
 Toggle.TextSize = 12
@@ -60,8 +94,8 @@ Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0, 4)
 
 local FOVBox = Instance.new("TextBox")
 FOVBox.Size = UDim2.new(0.9, 0, 0, 25)
-FOVBox.Position = UDim2.new(0.05, 0, 0, 50)
-FOVBox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+FOVBox.Position = UDim2.new(0.05, 0, 0, 80)
+FOVBox.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 FOVBox.Text = "FOV: " .. Settings.FOV
 FOVBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 FOVBox.Font = Enum.Font.Gotham
@@ -71,17 +105,27 @@ Instance.new("UICorner", FOVBox).CornerRadius = UDim.new(0, 4)
 
 local Credit = Instance.new("TextLabel")
 Credit.Size = UDim2.new(1, 0, 0, 20)
-Credit.Position = UDim2.new(0, 0, 0, 105)
+Credit.Position = UDim2.new(0, 0, 0, 130)
 Credit.BackgroundTransparency = 1
-Credit.Text = "Made By NullTalal | V4"
-Credit.TextColor3 = Color3.fromRGB(150, 150, 150)
+Credit.Text = "Made By NullTalal | V1"
+Credit.TextColor3 = Color3.fromRGB(100, 100, 100)
 Credit.Font = Enum.Font.Gotham
 Credit.TextSize = 10
 Credit.Parent = Main
 
+-- الأنميشن (فتح وقفل)
+local isOpen = true
+local openTween = TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 200, 0, 160)})
+local closeTween = TweenService:Create(Main, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Size = UDim2.new(0, 200, 0, 0)})
+
+ToggleOpenBtn.MouseButton1Click:Connect(function()
+    isOpen = not isOpen
+    if isOpen then openTween:Play() else closeTween:Play() end
+end)
+
 Toggle.MouseButton1Click:Connect(function()
     Settings.Enabled = not Settings.Enabled
-    Toggle.Text = Settings.Enabled and "Silent Aim V4 [ON]" or "Silent Aim V4 [OFF]"
+    Toggle.Text = Settings.Enabled and "Silent Aim V1 [ON]" or "Silent Aim V1 [OFF]"
     Toggle.BackgroundColor3 = Settings.Enabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(60, 60, 70)
 end)
 
@@ -97,7 +141,9 @@ RunService.RenderStepped:Connect(function()
     fovCircle.Visible = Settings.Enabled
 end)
 
--- 3. فحص الأهداف (تصويب على الرأس أو كرسي السيارة)
+-- ==========================================
+-- 3. فحص الأهداف
+-- ==========================================
 task.spawn(function()
     while task.wait(0.1) do
         if not Settings.Enabled then Target = nil TargetPart = nil continue end
@@ -140,7 +186,9 @@ task.spawn(function()
     end
 end)
 
+-- ==========================================
 -- 4. الهوك رقم 1: خداع الماوس (Mouse.Hit)
+-- ==========================================
 local function hookMouse()
     if oldIndex then return end
     oldIndex = hookmetamethod(game, "__index", function(t, k)
@@ -152,19 +200,14 @@ local function hookMouse()
                     return TargetPart
                 end
             end
-            -- خداع الكاميرا أيضاً
-            if t == Camera then
-                if k == "CFrame" then
-                    -- نخلي الكاميرا تتطلع على الهدف بدون ما تحرك الشاشة
-                    -- (بعض المابات تعتمد على اتجاه الكاميرا)
-                end
-            end
         end
         return oldIndex(t, k)
     end)
 end
 
+-- ==========================================
 -- 5. الهوك رقم 2: اعتراض الطلقات (Namecall)
+-- ==========================================
 local function hookNamecall()
     if oldNamecall then return end
     oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
@@ -216,4 +259,4 @@ task.spawn(function()
     end
 end)
 
-print("[+] Universal Silent Aim V4 Loaded | Made By NullTalal")
+print("[+] Universal Silent Aim V1 Loaded | Made By NullTalal")
