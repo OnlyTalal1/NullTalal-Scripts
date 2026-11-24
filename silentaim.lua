@@ -1,5 +1,5 @@
 -- ==========================================
--- Universal Silent Aim V1.1 | Made By NullTalal
+-- Universal Silent Aim V3 | Made By NullTalal
 -- ==========================================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -15,7 +15,6 @@ local Settings = {
 }
 
 local Target = nil
-local TargetPos = nil
 local oldNamecall
 
 -- 1. رسم دائرة الـ FOV
@@ -30,7 +29,7 @@ fovCircle.Visible = true
 
 -- 2. الواجهة
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "UniversalSilent"
+ScreenGui.Name = "UniversalSilentV3"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = game.CoreGui
 
@@ -48,7 +47,7 @@ local Toggle = Instance.new("TextButton")
 Toggle.Size = UDim2.new(0.9, 0, 0, 30)
 Toggle.Position = UDim2.new(0.05, 0, 0, 10)
 Toggle.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-Toggle.Text = "Silent Aim [ON]"
+Toggle.Text = "Silent Aim V3 [ON]"
 Toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
 Toggle.Font = Enum.Font.GothamBold
 Toggle.TextSize = 12
@@ -70,7 +69,7 @@ local Credit = Instance.new("TextLabel")
 Credit.Size = UDim2.new(1, 0, 0, 20)
 Credit.Position = UDim2.new(0, 0, 0, 105)
 Credit.BackgroundTransparency = 1
-Credit.Text = "Made By NullTalal"
+Credit.Text = "Made By NullTalal | V3"
 Credit.TextColor3 = Color3.fromRGB(150, 150, 150)
 Credit.Font = Enum.Font.Gotham
 Credit.TextSize = 10
@@ -78,7 +77,7 @@ Credit.Parent = Main
 
 Toggle.MouseButton1Click:Connect(function()
     Settings.Enabled = not Settings.Enabled
-    Toggle.Text = Settings.Enabled and "Silent Aim [ON]" or "Silent Aim [OFF]"
+    Toggle.Text = Settings.Enabled and "Silent Aim V3 [ON]" or "Silent Aim V3 [OFF]"
     Toggle.BackgroundColor3 = Settings.Enabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(60, 60, 70)
 end)
 
@@ -88,21 +87,17 @@ FOVBox.FocusLost:Connect(function()
     FOVBox.Text = "FOV: " .. Settings.FOV
 end)
 
--- 3. تحديث الدائرة
 RunService.RenderStepped:Connect(function()
-    local screenSize = Camera.ViewportSize
-    fovCircle.Position = Vector2.new(screenSize.X / 2, screenSize.Y / 2)
+    fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     fovCircle.Radius = Settings.FOV
     fovCircle.Visible = Settings.Enabled
 end)
 
--- 4. الفحص السريع
+-- 3. الفحص السريع (تصويب على الرأس أو السيارة)
 task.spawn(function()
     while task.wait(0.1) do
         if not Settings.Enabled then Target = nil continue end
-        
         local closest = nil
-        local closestPos = nil
         local shortest = Settings.FOV
         local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
         
@@ -113,9 +108,7 @@ task.spawn(function()
                 
                 if hum and part and hum.Health > 0 then
                     local pos3D = part.Position
-                    if Settings.VehicleFix and hum.SeatPart then
-                        pos3D = hum.SeatPart.Position
-                    end
+                    if Settings.VehicleFix and hum.SeatPart then pos3D = hum.SeatPart.Position end
                     
                     local dist3D = (Camera.CFrame.Position - pos3D).Magnitude
                     if dist3D <= Settings.MaxDistance then
@@ -125,7 +118,6 @@ task.spawn(function()
                             if dist2D < shortest then
                                 shortest = dist2D
                                 closest = part
-                                closestPos = pos3D
                             end
                         end
                     end
@@ -133,32 +125,47 @@ task.spawn(function()
             end
         end
         Target = closest
-        TargetPos = closestPos
     end
 end)
 
--- 5. الهوك
+-- 4. الـ Universal Hook V3 (يعترض Raycast و Hitbox و CFrame)
 local function hookNamecall()
     if oldNamecall then return end
     oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         local method = getnamecallmethod()
-        if Settings.Enabled and TargetPos and not checkcaller() then
+        
+        if Settings.Enabled and Target and not checkcaller() then
             local args = {...}
+            local newArgs = {}
+            
+            -- تعديل البيانات
             for i, v in pairs(args) do
                 if typeof(v) == "CFrame" then
-                    args[i] = CFrame.new(v.Position, TargetPos)
+                    newArgs[i] = CFrame.new(v.Position, Target.Position)
                 elseif typeof(v) == "Vector3" and v.Magnitude > 0.5 then
-                    args[i] = TargetPos
+                    newArgs[i] = Target.Position
+                elseif typeof(v) == "Instance" and v:IsA("BasePart") then
+                    newArgs[i] = Target -- إذا كانت اللعبة ترسل جزء معين كهدف
                 elseif typeof(v) == "table" then
+                    local newTable = {}
                     for k, val in pairs(v) do
                         if typeof(val) == "Vector3" and val.Magnitude > 0.5 then
-                            v[k] = TargetPos
+                            newTable[k] = Target.Position
+                        elseif typeof(val) == "Instance" and val:IsA("BasePart") then
+                            newTable[k] = Target
+                        else
+                            newTable[k] = val
                         end
                     end
+                    newArgs[i] = newTable
+                else
+                    newArgs[i] = v
                 end
             end
-            return oldNamecall(self, unpack(args))
+            
+            return oldNamecall(self, unpack(newArgs))
         end
+        
         return oldNamecall(self, ...)
     end)
 end
@@ -171,4 +178,4 @@ task.spawn(function()
     end
 end)
 
-print("[+] Universal Silent Aim V1.1 Loaded | Made By NullTalal")
+print("[+] Universal Silent Aim V3 Loaded | Made By NullTalal")
